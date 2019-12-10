@@ -1,11 +1,11 @@
 # HackTheBox: Wall.
 My write up for the recently retired HackTheBox machine: Wall!
 
-Wall was a fairly easy machine, although it was a little frustrating 
+Wall was a fairly easy machine, although it was a little frustrating.
 
 The machine had a web application vulnerable to RCE, however it was (semi) protected by a WAF.
 
-Root access involved a vulrable SUID binary.
+Root access involved a vulnerable SUID binary.
 
 ## In the beginning..
 As usual, I run nMap:
