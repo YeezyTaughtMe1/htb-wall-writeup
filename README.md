@@ -5,7 +5,7 @@ Wall was a fairly easy machine, although a little frustrating.
 
 The machine had a web application vulnerable to RCE, however it was (semi) protected by a WAF.
 
-Root access involved a vulnerable SUID binary.
+Root access involved a vulnerable SUID bit.
 
 ## In the beginning..
 As usual, I run nMap:
@@ -176,4 +176,4 @@ $ rm LinEnum.sh
 
 ## Thanks for reading :)
 
-I've prepared writeups for Postman, Traverxec and Resolute. Check back when they're retired!
+I've prepared writeups for many machines, feel free to check back or ask for help!
